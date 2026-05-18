@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🦈 Angry Sharks - Sprite Animation Demo</title>
+    <link rel="stylesheet" href="css/sprite-animator.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>🦈 Angry Sharks</h1>
+        <p>Sprite Animation System Demo - Shark Berjalan</p>
+      </header>
+
+      <div class="game-canvas">
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+      </div>
+
+      <div class="controls">
+        <button onclick="game.startAnimation()">▶ Mulai</button>
+        <button onclick="game.stopAnimation()">⏸ Pause</button>
+        <button onclick="game.resetAnimation()">↻ Reset</button>
+      </div>
+
+      <div class="info">
+        <h3>📊 Informasi Animasi</h3>
+        <p>
+          <strong>Frame Saat Ini:</strong> <span id="frameCount">0</span> / 4
+        </p>
+        <p><strong>Posisi X:</strong> <span id="position">0</span>px</p>
+        <p><strong>Status:</strong> <span id="status">Stopped ⏹</span></p>
+        <p
+          style="
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+          ">
+          <strong>⌨️ Keyboard Controls:</strong><br />
+          SPACE = Mulai/Pause | R = Reset | ← / → = Ubah Arah
+        </p>
+      </div>
+    </div>
+
+    <!-- Load sprite animator system -->
+    <script src="js/SpriteAnimator.js"></script>
+    <script src="js/game.js"></script>
+  </body>
+</html>

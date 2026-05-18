@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <title>DeepFeed — Shark Survival</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="game-wrapper">
+      <canvas id="gameCanvas" tabindex="0"></canvas>
+
+      <!-- HUD -->
+      <div id="hud">
+        <div id="hud-left">
+          <div id="score-display">
+            <span class="hud-label">SKOR</span>
+            <span id="score">0</span>
+          </div>
+          <div id="level-display">
+            <span class="hud-label">KEDALAMAN</span>
+            <span id="level">1</span>
+          </div>
+        </div>
+        <div id="hud-center">
+          <div id="health-bar-wrap">
+            <span class="hud-label">VITALITAS</span>
+            <div id="health-bar-bg">
+              <div id="health-bar"></div>
+              <div id="health-bar-shine"></div>
+            </div>
+          </div>
+          <div id="size-bar-wrap">
+            <span class="hud-label">UKURAN</span>
+            <div id="size-bar-bg">
+              <div id="size-bar"></div>
+            </div>
+          </div>
+          <div id="mission-display">
+            <span class="hud-label">MISI</span>
+            <span id="mission-text">Makan 6 ikan kecil (0/6)</span>
+          </div>
+        </div>
+        <div id="hud-right">
+          <div id="combo-display">
+            <span class="hud-label">KOMBO</span>
+            <span id="combo">x1</span>
+          </div>
+          <div id="eaten-display">
+            <span class="hud-label">DIMAKAN</span>
+            <span id="eaten">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Screens -->
+      <div id="start-screen" class="screen active">
+        <div class="screen-inner">
+          <div class="logo-wrap">
+            <div class="logo-shark">🦈</div>
+            <h1 class="logo-title">DEEP<span>FEED</span></h1>
+            <p class="logo-sub">Shark Survival</p>
+          </div>
+
+          <!-- High Score Display -->
+          <div class="high-score-card">
+            <div class="high-score-label">SKOR TERTINGGI</div>
+            <div class="high-score-value" id="high-score-display">0</div>
+          </div>
+
+          <div class="instructions">
+            <!-- <div class="inst-row">
+              <span class="inst-icon">🖱️</span
+              ><span>Gerakkan mouse / sentuh untuk mengontrol hiu</span>
+            </div> -->
+            <div class="inst-row">
+              <span class="inst-icon">⌨️</span
+              ><span>kontrol keyboard: W A S D</span>
+            </div>
+            <div class="inst-row">
+              <span class="inst-icon">🐟</span
+              ><span>Makan ikan yang <b>lebih kecil</b> untuk tumbuh</span>
+            </div>
+            <div class="inst-row">
+              <span class="inst-icon">❤️</span
+              ><span>Ikan hati menyembuhkan, ikan emas memberi bonus poin</span>
+            </div>
+            <div class="inst-row">
+              <span class="inst-icon">💣</span
+              ><span>Hindari barel, ranjau, dan harpun</span>
+            </div>
+          </div>
+          <button id="start-btn" class="cta-btn">MULAI</button>
+        </div>
+      </div>
+
+      <div id="gameover-screen" class="screen">
+        <div class="screen-inner">
+          <h2 class="go-title">DIMAKAN</h2>
+          <div class="go-stats">
+            <div class="stat-row">
+              <span>Skor Akhir</span><span id="go-score">0</span>
+            </div>
+            <div class="stat-row">
+              <span>Ikan Dimakan</span><span id="go-eaten">0</span>
+            </div>
+            <div class="stat-row">
+              <span>Kedalaman Maksimal</span><span id="go-depth">1</span>
+            </div>
+            <div class="stat-row">
+              <span>Kombo Terbaik</span><span id="go-combo">x1</span>
+            </div>
+          </div>
+          <button id="restart-btn" class="cta-btn">BERBURU LAGI</button>
+        </div>
+      </div>
+
+      <div id="pause-screen" class="screen">
+        <div class="screen-inner">
+          <h2>DIJEDA</h2>
+          <button id="resume-btn" class="cta-btn">LANJUTKAN</button>
+        </div>
+      </div>
+
+      <!-- Notification Container -->
+      <div id="notifications-container">
+        <div
+          id="tutorial-tip"
+          class="notification-item tutorial-tip hidden"></div>
+        <div
+          id="danger-warning"
+          class="notification-item danger-warning hidden">
+          BAHAYA MENDEKAT!
+        </div>
+      </div>
+    </div>
+    <script src="script.js"></script>
+  </body>
+</html>

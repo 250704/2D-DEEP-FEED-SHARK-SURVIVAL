@@ -1,0 +1,44 @@
+{
+  "sprites": {
+    "shark_walk": {
+      "name": "Shark Berjalan",
+      "frameCount": 4,
+      "framePrefix": "shark-walk",
+      "frameExtension": ".jpeg",
+      "assetPath": "assets/sprites",
+      "frameRate": 0.1,
+      "width": 150,
+      "height": 150,
+      "tags": ["walking", "animation", "main-character"]
+    },
+    "shark_idle": {
+      "name": "Shark Idle",
+      "frameCount": 2,
+      "framePrefix": "shark-idle",
+      "frameExtension": ".png",
+      "assetPath": "assets/sprites",
+      "frameRate": 0.15,
+      "width": 120,
+      "height": 120,
+      "tags": ["idle", "waiting"]
+    }
+  },
+  "animation": {
+    "default_speed": 0.1,
+    "min_speed": 0.05,
+    "max_speed": 0.5,
+    "default_movement_speed": 3,
+    "min_movement_speed": 1,
+    "max_movement_speed": 10,
+    "enable_auto_flip": true,
+    "enable_bounce": true,
+    "debug_mode": false
+  },
+  "canvas": {
+    "width": 800,
+    "height": 400,
+    "background_gradient": ["#1e90ff", "#0047ab", "#001a4d"],
+    "enable_particles": true,
+    "particle_count": 5
+  }
+}

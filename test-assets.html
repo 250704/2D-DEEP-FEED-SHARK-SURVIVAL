@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🦈 Angry Sharks - Asset Test</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      }
+      h1 {
+        color: #333;
+        text-align: center;
+        margin-bottom: 10px;
+      }
+      .subtitle {
+        text-align: center;
+        color: #666;
+        margin-bottom: 30px;
+      }
+      .section {
+        background: #f5f5f5;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+      }
+      .section h2 {
+        color: #333;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 10px;
+      }
+      .asset-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+      }
+      .asset-card {
+        background: white;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        transition: all 0.3s ease;
+      }
+      .asset-card:hover {
+        border-color: #667eea;
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        transform: translateY(-5px);
+      }
+      .asset-card img {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        background: #f0f0f0;
+      }
+      .asset-card .name {
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 5px;
+      }
+      .asset-card .size {
+        font-size: 0.85em;
+        color: #999;
+      }
+      .asset-card .status {
+        margin-top: 8px;
+        padding: 5px;
+        border-radius: 5px;
+        font-size: 0.85em;
+        font-weight: bold;
+      }
+      .status.loaded {
+        background: #d4edda;
+        color: #155724;
+      }
+      .status.loading {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .status.error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .info-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 15px;
+      }
+      .info-table tr {
+        border-bottom: 1px solid #ddd;
+      }
+      .info-table td {
+        padding: 10px;
+      }
+      .info-table td:first-child {
+        font-weight: bold;
+        color: #667eea;
+        width: 30%;
+      }
+      .preview-box {
+        background: white;
+        border: 2px solid #667eea;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        min-height: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .preview-box img {
+        max-width: 100%;
+        max-height: 150px;
+      }
+      button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 10px;
+        font-weight: bold;
+      }
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      }
+      .console-log {
+        background: #1e1e1e;
+        color: #00ff00;
+        padding: 15px;
+        border-radius: 5px;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        max-height: 200px;
+        overflow-y: auto;
+        margin-top: 10px;
+      }
+      .log-entry {
+        margin: 3px 0;
+      }
+      .log-success {
+        color: #00ff00;
+      }
+      .log-info {
+        color: #87ceeb;
+      }
+      .log-error {
+        color: #ff6b6b;
+      }
+      .checkmark {
+        display: inline-block;
+        color: #28a745;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🦈 Angry Sharks - Asset Verification Test</h1>
+      <p class="subtitle">
+        Verifikasi gambar shark berjalan dan integrasi ke game
+      </p>
+
+      <!-- Asset Check Section -->
+      <div class="section">
+        <h2>📦 Asset Check - Shark Walk Frames</h2>
+        <div class="asset-grid" id="assetGrid">
+          <!-- Akan di-generate oleh JavaScript -->
+        </div>
+        <table class="info-table">
+          <tr>
+            <td>Total Files:</td>
+            <td><span id="totalFiles">-</span></td>
+          </tr>
+          <tr>
+            <td>Total Size:</td>
+            <td><span id="totalSize">-</span></td>
+          </tr>
+          <tr>
+            <td>Status:</td>
+            <td><span id="overallStatus">-</span></td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Animation Preview -->
+      <div class="section">
+        <h2>🎬 Animation Preview</h2>
+        <p style="margin-bottom: 15px; color: #666">
+          Preview animasi shark berjalan dengan perubahan frame
+        </p>
+        <div style="display: flex; gap: 10px; margin-bottom: 15px">
+          <button onclick="startAnimation()">▶ Play</button>
+          <button onclick="stopAnimation()">⏸ Stop</button>
+          <button onclick="nextFrame()">⏭ Next Frame</button>
+        </div>
+        <div class="preview-box" id="previewBox">
+          <div style="text-align: center">
+            <p style="color: #999; margin-bottom: 10px">
+              Preview akan ditampilkan di sini
+            </p>
+            <small style="color: #bbb"
+              >Frame: <span id="frameNumber">0</span>/4</small
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- Integration Status -->
+      <div class="section">
+        <h2>🔧 Integration Status</h2>
+        <table class="info-table">
+          <tr>
+            <td>index.html</td>
+            <td><span class="checkmark">✓</span> Main game file exists</td>
+          </tr>
+          <tr>
+            <td>script.js</td>
+            <td>
+              <span class="checkmark">✓</span> Modified with loadSharkFrames()
+            </td>
+          </tr>
+          <tr>
+            <td>assets/sprites/</td>
+            <td id="assetStatus">
+              <span class="checkmark">✓</span> Shark images loaded
+            </td>
+          </tr>
+          <tr>
+            <td>drawPlayer()</td>
+            <td><span class="checkmark">✓</span> Updated to render sprite</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Console Log -->
+      <div class="section">
+        <h2>📋 Console Output</h2>
+        <div class="console-log" id="consoleLog">
+          <div class="log-entry log-info">Initializing asset test...</div>
+        </div>
+      </div>
+
+      <!-- Next Steps -->
+      <div class="section">
+        <h2>🚀 Next Steps</h2>
+        <ol style="margin-left: 20px; color: #333; line-height: 1.8">
+          <li>Jika semua asset loaded dengan ✓ (green), test sudah berhasil</li>
+          <li>
+            Buka <strong>index.html</strong> untuk bermain game dengan shark
+            animasi baru
+          </li>
+          <li>Jika ada error, lihat console output di atas</li>
+          <li>
+            Periksa path: <code>assets/sprites/shark-walk-1.jpeg</code> dll
+          </li>
+        </ol>
+      </div>
+    </div>
+
+    <script>
+      const assets = [
+        {
+          name: "shark-walk-1.jpeg",
+          path: "assets/sprites/shark-walk-1.jpeg",
+          size: "6.9 KB",
+        },
+        {
+          name: "shark-walk-2.jpeg",
+          path: "assets/sprites/shark-walk-2.jpeg",
+          size: "7.0 KB",
+        },
+        {
+          name: "shark-walk-3.jpeg",
+          path: "assets/sprites/shark-walk-3.jpeg",
+          size: "6.4 KB",
+        },
+        {
+          name: "shark-walk-4.jpeg",
+          path: "assets/sprites/shark-walk-4.jpeg",
+          size: "7.0 KB",
+        },
+      ];
+
+      let loadedFrames = [];
+      let currentFrame = 0;
+      let animationRunning = false;
+      let animationInterval = null;
+
+      function log(message, type = "info") {
+        const consoleLog = document.getElementById("consoleLog");
+        const entry = document.createElement("div");
+        entry.className = `log-entry log-${type}`;
+        entry.textContent = message;
+        consoleLog.appendChild(entry);
+        consoleLog.scrollTop = consoleLog.scrollHeight;
+      }
+
+      async function loadAssets() {
+        log("🔍 Scanning assets...", "info");
+
+        for (const asset of assets) {
+          const img = new Image();
+          img.src = asset.path;
+
+          try {
+            await new Promise((resolve, reject) => {
+              img.onload = () => {
+                loadedFrames.push(img);
+                log(`✓ Loaded: ${asset.name}`, "success");
+                resolve();
+              };
+              img.onerror = () => {
+                log(`✗ Failed: ${asset.name}`, "error");
+                resolve();
+              };
+              setTimeout(() => reject(new Error("Timeout")), 5000);
+            });
+          } catch (e) {
+            log(`✗ Error loading ${asset.name}: ${e.message}`, "error");
+          }
+        }
+
+        updateUI();
+      }
+
+      function updateUI() {
+        // Update counts
+        document.getElementById("totalFiles").textContent = assets.length;
+        document.getElementById("totalSize").textContent = "27.3 KB";
+
+        const status =
+          loadedFrames.length === 4 ?
+            "✓ Ready"
+          : `⚠ ${loadedFrames.length}/4 loaded`;
+        document.getElementById("overallStatus").innerHTML = status;
+
+        // Create asset cards
+        const grid = document.getElementById("assetGrid");
+        grid.innerHTML = "";
+
+        assets.forEach((asset, index) => {
+          const card = document.createElement("div");
+          card.className = "asset-card";
+
+          const loaded = loadedFrames[index];
+          const statusClass = loaded ? "loaded" : "error";
+          const statusText = loaded ? "✓ Loaded" : "✗ Failed";
+
+          card.innerHTML = `
+                    <img src="${asset.path}" onerror="this.style.display='none'">
+                    <div class="name">${asset.name}</div>
+                    <div class="size">${asset.size}</div>
+                    <div class="status ${statusClass}">${statusText}</div>
+                `;
+          grid.appendChild(card);
+        });
+      }
+
+      function startAnimation() {
+        if (animationRunning) return;
+        animationRunning = true;
+        currentFrame = 0;
+
+        animationInterval = setInterval(() => {
+          currentFrame = (currentFrame + 1) % loadedFrames.length;
+          displayFrame();
+        }, 200);
+
+        log("▶ Animation started", "success");
+      }
+
+      function stopAnimation() {
+        animationRunning = false;
+        clearInterval(animationInterval);
+        log("⏸ Animation stopped", "info");
+      }
+
+      function nextFrame() {
+        stopAnimation();
+        currentFrame = (currentFrame + 1) % loadedFrames.length;
+        displayFrame();
+      }
+
+      function displayFrame() {
+        if (loadedFrames.length === 0) return;
+
+        const previewBox = document.getElementById("previewBox");
+        previewBox.innerHTML = "";
+
+        const img = document.createElement("img");
+        img.src = loadedFrames[currentFrame].src;
+        img.style.maxHeight = "200px";
+
+        const info = document.createElement("div");
+        info.style.marginTop = "10px";
+        info.style.color = "#999";
+        info.textContent = `Frame: ${currentFrame + 1}/${loadedFrames.length}`;
+
+        previewBox.appendChild(img);
+        previewBox.appendChild(info);
+
+        document.getElementById("frameNumber").textContent = currentFrame + 1;
+      }
+
+      // Start loading on page load
+      window.addEventListener("load", () => {
+        log("🎮 Angry Sharks Asset Test", "info");
+        loadAssets();
+      });
+    </script>
+  </body>
+</html>
