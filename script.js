@@ -353,6 +353,20 @@ let sfxMaster = null;
 let musicMaster = null;
 /** @type {AudioScheduledSourceNode[]} */
 let ambientStoppables = [];
+let ambientDroneGains = [];
+let musicNextNoteAt = 0;
+let musicStepIndex = 0;
+let fallbackMusicCooldown = 0;
+let fallbackMusicStep = 0;
+const MUSIC_FILE_PATH = "assets/sounds/Beneath_the_Coral_Shelf.mp3";
+let bgmAudio = null;
+
+const MUSIC_BPM = 102;
+const MUSIC_STEP_BEATS = 0.5;
+const MUSIC_LEAD_PATTERN = [
+  220, 246.94, 261.63, 293.66, 329.63, 293.66, 261.63, 246.94,
+];
+const FALLBACK_MUSIC_PATTERN = [174.61, 196, 220, 246.94, 196, 220, 246.94, 293.66];
 
 function sfxGetContext() {
   const AC = window.AudioContext || window.webkitAudioContext;
@@ -360,13 +374,23 @@ function sfxGetContext() {
   if (!sfxCtx) {
     sfxCtx = new AC();
     sfxMaster = sfxCtx.createGain();
-    sfxMaster.gain.value = 0.38;
+    sfxMaster.gain.value = 0.95;
     sfxMaster.connect(sfxCtx.destination);
     musicMaster = sfxCtx.createGain();
     musicMaster.gain.value = 0;
     musicMaster.connect(sfxCtx.destination);
   }
   return sfxCtx;
+}
+
+function getBgmAudio() {
+  if (bgmAudio) return bgmAudio;
+  const audio = new Audio(MUSIC_FILE_PATH);
+  audio.loop = true;
+  audio.preload = "auto";
+  audio.volume = 0.5;
+  bgmAudio = audio;
+  return bgmAudio;
 }
 
 async function sfxUnlock() {
@@ -396,6 +420,15 @@ function sfxNow() {
 function sfxTone(freq, dur, type, peakVol, t0, freqEnd) {
   const ctx = sfxGetContext();
   if (!ctx || !sfxMaster) return;
+  const bgm = getBgmAudio();
+  if (bgm && !bgm.paused) {
+    const baseVol = 0.55;
+    const duckVol = Math.max(0.28, baseVol - 0.12);
+    bgm.volume = duckVol;
+    setTimeout(() => {
+      if (!bgm.paused) bgm.volume = baseVol;
+    }, 140);
+  }
   const osc = ctx.createOscillator();
   const g = ctx.createGain();
   osc.type = type;
@@ -416,6 +449,15 @@ function sfxTone(freq, dur, type, peakVol, t0, freqEnd) {
 function sfxNoiseBurst(dur, peakVol, t0, filterFreq) {
   const ctx = sfxGetContext();
   if (!ctx || !sfxMaster) return;
+  const bgm = getBgmAudio();
+  if (bgm && !bgm.paused) {
+    const baseVol = 0.55;
+    const duckVol = Math.max(0.26, baseVol - 0.16);
+    bgm.volume = duckVol;
+    setTimeout(() => {
+      if (!bgm.paused) bgm.volume = baseVol;
+    }, 180);
+  }
   const len = Math.ceil(ctx.sampleRate * dur);
   const buf = ctx.createBuffer(1, len, ctx.sampleRate);
   const data = buf.getChannelData(0);
@@ -499,6 +541,12 @@ function playSfxHeart() {
 
 // ── Ambient BGM (procedural “deep ocean” pad, same AudioContext as SFX) ──
 function stopAmbientMusic() {
+  const audio = getBgmAudio();
+  try {
+    audio.pause();
+    audio.currentTime = 0;
+  } catch (_) {}
+
   const ctx = sfxGetContext();
   const t = ctx ? ctx.currentTime : 0;
   for (const n of ambientStoppables) {
@@ -507,57 +555,67 @@ function stopAmbientMusic() {
     } catch (_) {}
   }
   ambientStoppables.length = 0;
+  ambientDroneGains = [];
+  musicNextNoteAt = 0;
+  musicStepIndex = 0;
+  fallbackMusicCooldown = 0;
+  fallbackMusicStep = 0;
   if (musicMaster && ctx) {
     musicMaster.gain.cancelScheduledValues(t);
     musicMaster.gain.linearRampToValueAtTime(0, t + 0.35);
   }
 }
 
+function scheduleMusicLeadNote(ctx, t0, hz, intensity) {
+  if (!musicMaster) return;
+  const osc = ctx.createOscillator();
+  osc.type = "triangle";
+  osc.frequency.setValueAtTime(hz, t0);
+  const g = ctx.createGain();
+  const peak = 0.075 + intensity * 0.04;
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(peak, t0 + 0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.24);
+  osc.connect(g);
+  g.connect(musicMaster);
+  osc.start(t0);
+  osc.stop(t0 + 0.27);
+}
+
 function startAmbientMusic() {
+  const audio = getBgmAudio();
+  let fileMusicActive = false;
+  try {
+    audio.volume = 0.55;
+    audio.currentTime = 0;
+    const playPromise = audio.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {});
+    }
+    fileMusicActive = true;
+  } catch (_) {}
+  if (fileMusicActive) return;
+
   const ctx = sfxGetContext();
   if (!ctx || !musicMaster) return;
+  if (ctx.state === "suspended") {
+    void ctx.resume();
+  }
   stopAmbientMusic();
 
   const t0 = ctx.currentTime;
   musicMaster.gain.cancelScheduledValues(t0);
   musicMaster.gain.setValueAtTime(0, t0);
-  musicMaster.gain.linearRampToValueAtTime(0.14, t0 + 2.2);
-
-  const bufSec = 2.8;
-  const bufLen = Math.ceil(ctx.sampleRate * bufSec);
-  const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
-  const d = buf.getChannelData(0);
-  for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * 0.9;
-
-  const noise = ctx.createBufferSource();
-  noise.buffer = buf;
-  noise.loop = true;
-  const nf = ctx.createBiquadFilter();
-  nf.type = "lowpass";
-  nf.frequency.setValueAtTime(255, t0);
-  nf.Q.value = 0.65;
-  const ng = ctx.createGain();
-  ng.gain.value = 0.048;
-  noise.connect(nf);
-  nf.connect(ng);
-  ng.connect(musicMaster);
-  noise.start(t0);
-  ambientStoppables.push(noise);
-
-  const lfo = ctx.createOscillator();
-  lfo.type = "sine";
-  lfo.frequency.value = 0.055;
-  const lfoDepth = ctx.createGain();
-  lfoDepth.gain.value = 42;
-  lfo.connect(lfoDepth);
-  lfoDepth.connect(nf.frequency);
-  lfo.start(t0);
-  ambientStoppables.push(lfo);
+  musicMaster.gain.linearRampToValueAtTime(0.55, t0 + 0.9);
+  musicNextNoteAt = t0 + 0.15;
+  musicStepIndex = 0;
+  fallbackMusicCooldown = 0.06;
+  fallbackMusicStep = 0;
 
   const drones = [
-    [49, 0.038],
-    [61.5, 0.026],
-    [73.5, 0.019],
+    [110, 0.11],
+    [164.81, 0.085],
+    [220, 0.065],
   ];
   for (const [hz, vol] of drones) {
     const o = ctx.createOscillator();
@@ -569,7 +627,86 @@ function startAmbientMusic() {
     g.connect(musicMaster);
     o.start(t0);
     ambientStoppables.push(o);
+    ambientDroneGains.push(g);
   }
+
+  // Soft startup cue so user can clearly hear that music has started.
+  const intro = ctx.createOscillator();
+  intro.type = "sine";
+  intro.frequency.setValueAtTime(294, t0);
+  intro.frequency.exponentialRampToValueAtTime(220, t0 + 0.55);
+  const introGain = ctx.createGain();
+  introGain.gain.setValueAtTime(0.0001, t0);
+  introGain.gain.exponentialRampToValueAtTime(0.05, t0 + 0.05);
+  introGain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.6);
+  intro.connect(introGain);
+  introGain.connect(musicMaster);
+  intro.start(t0);
+  intro.stop(t0 + 0.65);
+}
+
+function updateFallbackMusic(dt, intensity) {
+  if (state !== "play") return;
+  fallbackMusicCooldown -= dt;
+  const stepDur = 0.3;
+  while (fallbackMusicCooldown <= 0) {
+    const hz =
+      FALLBACK_MUSIC_PATTERN[fallbackMusicStep % FALLBACK_MUSIC_PATTERN.length];
+    const t0 = sfxNow() + 0.02;
+    const leadVol = 0.1 + intensity * 0.05;
+    const bassVol = 0.07 + intensity * 0.03;
+    sfxTone(hz, 0.2, "triangle", leadVol, t0, hz * 0.998);
+    if (fallbackMusicStep % 2 === 0) {
+      sfxTone(Math.max(55, hz * 0.5), 0.26, "sine", bassVol, t0);
+    }
+    fallbackMusicStep++;
+    fallbackMusicCooldown += stepDur;
+  }
+}
+
+function updateAmbientMusic() {
+  const audio = getBgmAudio();
+  if (state === "play") {
+    const p = audio.play();
+    if (p && typeof p.catch === "function") p.catch(() => {});
+    if (!audio.paused) return;
+  }
+
+  if (!sfxCtx || !musicMaster) return;
+  if (state !== "play") return;
+  const t = sfxCtx.currentTime;
+  const levelNorm = clamp((level - 1) / Math.max(1, MAX_LEVEL - 1), 0, 1);
+  const lowHealthNorm = clamp((MAX_HEALTH - health) / MAX_HEALTH, 0, 1);
+  const dangerNorm = clamp(hazards.length / 8, 0, 1);
+  const intensity = clamp(
+    levelNorm * 0.55 + lowHealthNorm * 0.3 + dangerNorm * 0.25,
+    0,
+    1,
+  );
+
+  const targetMaster = 0.58 + intensity * 0.28;
+  musicMaster.gain.cancelScheduledValues(t);
+  musicMaster.gain.setTargetAtTime(targetMaster, t, 0.35);
+
+  for (let i = 0; i < ambientDroneGains.length; i++) {
+    const g = ambientDroneGains[i];
+    const base = [0.11, 0.085, 0.065][i] ?? 0.06;
+    g.gain.setTargetAtTime(base + intensity * 0.04, t, 0.5);
+  }
+
+  // Continuous musical loop (lead notes) while game is running.
+  const stepDur = (60 / MUSIC_BPM) * MUSIC_STEP_BEATS;
+  const lookAhead = 0.25;
+  if (musicNextNoteAt <= 0) musicNextNoteAt = t + 0.05;
+  while (musicNextNoteAt < t + lookAhead) {
+    const note = MUSIC_LEAD_PATTERN[musicStepIndex % MUSIC_LEAD_PATTERN.length];
+    scheduleMusicLeadNote(sfxCtx, musicNextNoteAt, note, intensity);
+    musicNextNoteAt += stepDur;
+    musicStepIndex++;
+  }
+
+  // Backup loop via SFX bus (audible on devices where ambient layer is too subtle).
+  updateFallbackMusic(dtCache || 0.016, intensity);
 }
 
 async function loadNemoFishSprites() {
@@ -813,6 +950,7 @@ const FISH_TYPES = [
 // ═══════════════════════════════════════════════════════
 function startGame() {
   focusGameCanvas();
+  startAmbientMusic();
   if (KEYBOARD_ONLY_MOVEMENT) controlMode = "keyboard";
   score = 0;
   eaten = 0;
@@ -1276,6 +1414,7 @@ function update(dt) {
   dtCache = dt;
   // clamp dt against huge spikes
   dt = Math.min(dt, 0.05);
+  updateAmbientMusic();
 
   // ── Difficulty by level progression (growth-based) ──
   spawnInterval = Math.max(0.45, 1.1 - (level - 1) * 0.08);
