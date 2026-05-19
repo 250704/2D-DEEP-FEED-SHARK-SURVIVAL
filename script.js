@@ -350,6 +350,9 @@ initHighScore();
 // ── Web Audio: procedural SFX (no external files; unlocks on user tap) ──
 let sfxCtx = null;
 let sfxMaster = null;
+let musicMaster = null;
+/** @type {AudioScheduledSourceNode[]} */
+let ambientStoppables = [];
 
 function sfxGetContext() {
   const AC = window.AudioContext || window.webkitAudioContext;
@@ -359,6 +362,9 @@ function sfxGetContext() {
     sfxMaster = sfxCtx.createGain();
     sfxMaster.gain.value = 0.38;
     sfxMaster.connect(sfxCtx.destination);
+    musicMaster = sfxCtx.createGain();
+    musicMaster.gain.value = 0;
+    musicMaster.connect(sfxCtx.destination);
   }
   return sfxCtx;
 }
@@ -489,6 +495,81 @@ function playSfxHeart() {
   const t0 = sfxNow();
   sfxTone(392, 0.12, "sine", 0.14, t0);
   sfxTone(494, 0.15, "sine", 0.12, t0 + 0.1);
+}
+
+// ── Ambient BGM (procedural “deep ocean” pad, same AudioContext as SFX) ──
+function stopAmbientMusic() {
+  const ctx = sfxGetContext();
+  const t = ctx ? ctx.currentTime : 0;
+  for (const n of ambientStoppables) {
+    try {
+      n.stop(t + 0.04);
+    } catch (_) {}
+  }
+  ambientStoppables.length = 0;
+  if (musicMaster && ctx) {
+    musicMaster.gain.cancelScheduledValues(t);
+    musicMaster.gain.linearRampToValueAtTime(0, t + 0.35);
+  }
+}
+
+function startAmbientMusic() {
+  const ctx = sfxGetContext();
+  if (!ctx || !musicMaster) return;
+  stopAmbientMusic();
+
+  const t0 = ctx.currentTime;
+  musicMaster.gain.cancelScheduledValues(t0);
+  musicMaster.gain.setValueAtTime(0, t0);
+  musicMaster.gain.linearRampToValueAtTime(0.14, t0 + 2.2);
+
+  const bufSec = 2.8;
+  const bufLen = Math.ceil(ctx.sampleRate * bufSec);
+  const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * 0.9;
+
+  const noise = ctx.createBufferSource();
+  noise.buffer = buf;
+  noise.loop = true;
+  const nf = ctx.createBiquadFilter();
+  nf.type = "lowpass";
+  nf.frequency.setValueAtTime(255, t0);
+  nf.Q.value = 0.65;
+  const ng = ctx.createGain();
+  ng.gain.value = 0.048;
+  noise.connect(nf);
+  nf.connect(ng);
+  ng.connect(musicMaster);
+  noise.start(t0);
+  ambientStoppables.push(noise);
+
+  const lfo = ctx.createOscillator();
+  lfo.type = "sine";
+  lfo.frequency.value = 0.055;
+  const lfoDepth = ctx.createGain();
+  lfoDepth.gain.value = 42;
+  lfo.connect(lfoDepth);
+  lfoDepth.connect(nf.frequency);
+  lfo.start(t0);
+  ambientStoppables.push(lfo);
+
+  const drones = [
+    [49, 0.038],
+    [61.5, 0.026],
+    [73.5, 0.019],
+  ];
+  for (const [hz, vol] of drones) {
+    const o = ctx.createOscillator();
+    o.type = "sine";
+    o.frequency.value = hz;
+    const g = ctx.createGain();
+    g.gain.value = vol;
+    o.connect(g);
+    g.connect(musicMaster);
+    o.start(t0);
+    ambientStoppables.push(o);
+  }
 }
 
 async function loadNemoFishSprites() {
@@ -653,6 +734,7 @@ function setMoveKeyState(e, pressed) {
 
 async function beginDeepFeedSession() {
   await sfxUnlock();
+  startAmbientMusic();
   startGame();
 }
 
@@ -810,6 +892,7 @@ function startGame() {
 }
 
 function gameOver() {
+  stopAmbientMusic();
   state = "over";
   playSfxGameOver();
   setTutorialTip("");
@@ -827,11 +910,13 @@ function gameOver() {
 async function togglePause() {
   if (state === "play") {
     state = "pause";
+    stopAmbientMusic();
     setTutorialTip("");
     setDangerWarning(false);
     showScreen(pauseScr);
   } else if (state === "pause") {
     await sfxUnlock();
+    startAmbientMusic();
     state = "play";
     lastTime = performance.now();
     showScreen(null);
