@@ -347,6 +347,139 @@ function checkHighScore() {
 
 initHighScore();
 
+// ── Web Audio: procedural SFX (no external files; unlocks on user tap) ──
+let sfxCtx = null;
+let sfxMaster = null;
+
+function sfxGetContext() {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  if (!sfxCtx) {
+    sfxCtx = new AC();
+    sfxMaster = sfxCtx.createGain();
+    sfxMaster.gain.value = 0.28;
+    sfxMaster.connect(sfxCtx.destination);
+  }
+  return sfxCtx;
+}
+
+function sfxUnlock() {
+  const ctx = sfxGetContext();
+  if (!ctx) return;
+  if (ctx.state === "suspended") {
+    ctx.resume().catch(() => {});
+  }
+}
+
+function sfxNow() {
+  const ctx = sfxGetContext();
+  return ctx ? ctx.currentTime : 0;
+}
+
+function sfxTone(freq, dur, type, peakVol, t0, freqEnd) {
+  const ctx = sfxGetContext();
+  if (!ctx || !sfxMaster) return;
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t0);
+  if (freqEnd != null) {
+    osc.frequency.exponentialRampToValueAtTime(Math.max(20, freqEnd), t0 + dur);
+  }
+  osc.connect(g);
+  g.connect(sfxMaster);
+  const v = Math.max(0.0001, peakVol);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(v, t0 + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.03);
+}
+
+function sfxNoiseBurst(dur, peakVol, t0, filterFreq) {
+  const ctx = sfxGetContext();
+  if (!ctx || !sfxMaster) return;
+  const len = Math.ceil(ctx.sampleRate * dur);
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const filt = ctx.createBiquadFilter();
+  filt.type = "bandpass";
+  filt.frequency.value = filterFreq;
+  filt.Q.value = 0.85;
+  const g = ctx.createGain();
+  src.connect(filt);
+  filt.connect(g);
+  g.connect(sfxMaster);
+  const v = Math.max(0.0001, peakVol);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(v, t0 + 0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  src.start(t0);
+  src.stop(t0 + dur + 0.02);
+}
+
+function playSfxEat(comboCount) {
+  const t0 = sfxNow();
+  const pitch = 1 + Math.min(comboCount, 8) * 0.045;
+  sfxTone(420 * pitch, 0.07, "triangle", 0.22, t0, 140 * pitch);
+  sfxTone(880 * pitch, 0.04, "sine", 0.08, t0 + 0.02);
+}
+
+function playSfxHurt() {
+  const t0 = sfxNow();
+  sfxNoiseBurst(0.14, 0.35, t0, 420);
+  sfxTone(95, 0.18, "sawtooth", 0.12, t0, 55);
+}
+
+function playSfxHazard() {
+  const t0 = sfxNow();
+  sfxNoiseBurst(0.12, 0.32, t0, 1200);
+  sfxTone(180, 0.1, "square", 0.08, t0 + 0.02, 60);
+}
+
+function playSfxLevelUp() {
+  const t0 = sfxNow();
+  sfxTone(523, 0.1, "sine", 0.18, t0);
+  sfxTone(659, 0.1, "sine", 0.16, t0 + 0.08);
+  sfxTone(784, 0.14, "sine", 0.2, t0 + 0.16);
+}
+
+function playSfxEvolve() {
+  const t0 = sfxNow();
+  sfxTone(392, 0.12, "sine", 0.15, t0);
+  sfxTone(494, 0.12, "sine", 0.15, t0 + 0.1);
+  sfxTone(587, 0.12, "sine", 0.15, t0 + 0.2);
+  sfxTone(784, 0.2, "triangle", 0.22, t0 + 0.32);
+}
+
+function playSfxGameOver() {
+  const t0 = sfxNow();
+  sfxTone(220, 0.2, "sine", 0.2, t0, 110);
+  sfxTone(165, 0.35, "sine", 0.18, t0 + 0.18, 55);
+}
+
+function playSfxMission() {
+  const t0 = sfxNow();
+  sfxTone(660, 0.08, "sine", 0.14, t0);
+  sfxTone(880, 0.1, "sine", 0.16, t0 + 0.07);
+  sfxTone(1320, 0.14, "triangle", 0.12, t0 + 0.14);
+}
+
+function playSfxGold() {
+  const t0 = sfxNow();
+  sfxTone(1200, 0.06, "sine", 0.12, t0);
+  sfxTone(1800, 0.08, "sine", 0.14, t0 + 0.05);
+}
+
+function playSfxHeart() {
+  const t0 = sfxNow();
+  sfxTone(392, 0.12, "sine", 0.14, t0);
+  sfxTone(494, 0.15, "sine", 0.12, t0 + 0.1);
+}
+
 async function loadNemoFishSprites() {
   let loaded = 0;
   for (let i = 0; i < NEMO_DIR_CANDIDATES.length; i++) {
@@ -580,6 +713,7 @@ const FISH_TYPES = [
 //  GAME INIT / START / OVER
 // ═══════════════════════════════════════════════════════
 function startGame() {
+  sfxUnlock();
   focusGameCanvas();
   if (KEYBOARD_ONLY_MOVEMENT) controlMode = "keyboard";
   score = 0;
@@ -661,6 +795,7 @@ function startGame() {
 
 function gameOver() {
   state = "over";
+  playSfxGameOver();
   setTutorialTip("");
   setDangerWarning(false);
   checkHighScore(); // Update high score if current score is higher
@@ -680,6 +815,7 @@ function togglePause() {
     setDangerWarning(false);
     showScreen(pauseScr);
   } else if (state === "pause") {
+    sfxUnlock();
     state = "play";
     lastTime = performance.now();
     showScreen(null);
@@ -722,6 +858,7 @@ function updateMissionProgress() {
 
   const done = missionProgress >= mission.target;
   if (done) {
+    playSfxMission();
     score += mission.reward;
     addPopText(player.x, player.y - player.radius - 28, `MISI SELESAI +${mission.reward}`, "#7efcff");
     missionIndex = (missionIndex + 1) % MISSIONS.length;
@@ -1226,6 +1363,7 @@ function update(dt) {
   const unlockedStage = getSharkStageIndex(sizeTarget);
   if (unlockedStage > sharkStageIndex) {
     sharkStageIndex = unlockedStage;
+    playSfxEvolve();
     addPopText(
       player.x,
       player.y - player.radius - 26,
@@ -1240,6 +1378,7 @@ function update(dt) {
   if (level < MAX_LEVEL && sizeTarget >= nextReq) {
     level += 1;
     maxDepth = Math.max(maxDepth, level);
+    playSfxLevelUp();
     addPopText(
       player.x,
       player.y - player.radius - 20,
@@ -1483,6 +1622,7 @@ function update(dt) {
       spawnHitParticles(h.x, h.y);
       spawnBloodParticles(h.x, h.y, 6);
       addPopText(h.x, h.y - 20, `-${finalDamage}`, "#ff2d2d");
+      playSfxHazard();
       shakeMag = 8;
       hazards.splice(i, 1);
     }
@@ -1548,6 +1688,7 @@ function eatFish(f, i) {
 
   comboCount++;
   comboTimer = COMBO_WINDOW;
+  playSfxEat(comboCount);
   if (comboCount > bestCombo) bestCombo = comboCount;
 
   const pts = f.type.points * comboCount;
@@ -1566,8 +1707,10 @@ function eatFish(f, i) {
   // special fish bonus to mirror Angry Sharks loop
   if (f.bonusType === "heart") {
     health = Math.min(MAX_HEALTH, health + 22);
+    playSfxHeart();
     addPopText(f.x, f.y - f.radius - 14, "PENYEMBUH +", "#7dff8a");
   } else if (f.bonusType === "gold") {
+    playSfxGold();
     score += 120;
     player.invincible = Math.max(player.invincible, 1.4);
     sizeTarget = Math.min(MAX_SIZE_GROW, sizeTarget + 0.05);
@@ -1596,6 +1739,7 @@ function eatFish(f, i) {
 }
 
 function hurtPlayer(f) {
+  playSfxHurt();
   player.invincible = 2.0;
   const stage = getCurrentSharkStage();
   const damage = Math.round(30 * stage.damageMul);
