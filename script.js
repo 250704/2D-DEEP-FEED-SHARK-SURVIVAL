@@ -357,18 +357,29 @@ function sfxGetContext() {
   if (!sfxCtx) {
     sfxCtx = new AC();
     sfxMaster = sfxCtx.createGain();
-    sfxMaster.gain.value = 0.28;
+    sfxMaster.gain.value = 0.38;
     sfxMaster.connect(sfxCtx.destination);
   }
   return sfxCtx;
 }
 
-function sfxUnlock() {
+async function sfxUnlock() {
   const ctx = sfxGetContext();
   if (!ctx) return;
-  if (ctx.state === "suspended") {
-    ctx.resume().catch(() => {});
-  }
+  try {
+    if (ctx.state === "suspended") await ctx.resume();
+    // Satu “blip” tak terdengar membantu beberapa browser/WebView membuka graf audio.
+    if (sfxMaster) {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      g.gain.value = 0.00001;
+      osc.connect(g);
+      g.connect(sfxMaster);
+      const now = ctx.currentTime;
+      osc.start(now);
+      osc.stop(now + 0.001);
+    }
+  } catch (_) {}
 }
 
 function sfxNow() {
@@ -588,7 +599,7 @@ function handleGlobalKeydown(e) {
     !e.repeat &&
     (e.code === "Escape" || e.code === "KeyP" || e.key === "p" || e.key === "P")
   ) {
-    togglePause();
+    void togglePause();
   }
   setMoveKeyState(e, true);
 }
@@ -602,6 +613,7 @@ window.addEventListener("keyup", handleGlobalKeyup);
 window.addEventListener("blur", resetMovementInputs);
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) resetMovementInputs();
+  else void sfxUnlock();
 });
 
 function getMoveKeyId(e) {
@@ -639,9 +651,14 @@ function setMoveKeyState(e, pressed) {
   e.preventDefault();
 }
 
-startBtn.addEventListener("click", startGame);
-restartBtn.addEventListener("click", startGame);
-resumeBtn.addEventListener("click", togglePause);
+async function beginDeepFeedSession() {
+  await sfxUnlock();
+  startGame();
+}
+
+startBtn.addEventListener("click", () => void beginDeepFeedSession());
+restartBtn.addEventListener("click", () => void beginDeepFeedSession());
+resumeBtn.addEventListener("click", () => void togglePause());
 
 // ═══════════════════════════════════════════════════════
 //  FISH CONFIG
@@ -713,7 +730,6 @@ const FISH_TYPES = [
 //  GAME INIT / START / OVER
 // ═══════════════════════════════════════════════════════
 function startGame() {
-  sfxUnlock();
   focusGameCanvas();
   if (KEYBOARD_ONLY_MOVEMENT) controlMode = "keyboard";
   score = 0;
@@ -808,14 +824,14 @@ function gameOver() {
   showScreen(goScr);
 }
 
-function togglePause() {
+async function togglePause() {
   if (state === "play") {
     state = "pause";
     setTutorialTip("");
     setDangerWarning(false);
     showScreen(pauseScr);
   } else if (state === "pause") {
-    sfxUnlock();
+    await sfxUnlock();
     state = "play";
     lastTime = performance.now();
     showScreen(null);
