@@ -32,12 +32,6 @@
               <div id="health-bar-shine"></div>
             </div>
           </div>
-          <div id="size-bar-wrap">
-            <span class="hud-label">UKURAN</span>
-            <div id="size-bar-bg">
-              <div id="size-bar"></div>
-            </div>
-          </div>
           <div id="mission-display">
             <span class="hud-label">MISI</span>
             <span id="mission-text">Makan 6 ikan kecil (0/6)</span>
@@ -59,7 +53,12 @@
       <div id="start-screen" class="screen active">
         <div class="screen-inner">
           <div class="logo-wrap">
-            <div class="logo-shark">🦈</div>
+            <div class="logo-shark">
+              <img
+                src="assets/aset-shack/right-removebg-preview.png"
+                alt="shark"
+                class="shark-logo-img" />
+            </div>
             <h1 class="logo-title">DEEP<span>FEED</span></h1>
             <p class="logo-sub">Shark Survival</p>
           </div>
@@ -75,29 +74,33 @@
               <span class="inst-icon">🖱️</span
               ><span>Gerakkan mouse / sentuh untuk mengontrol hiu</span>
             </div> -->
-            <div class="inst-row">
+            <!-- <div class="inst-row">
               <span class="inst-icon">🔊</span
               ><span>Suara &amp; musik aktif setelah mengetuk Mulai (kebijakan browser)</span>
             </div>
             <div class="inst-row">
               <span class="inst-icon">🎵</span
               ><span>Musik latar tema laut dalam; berhenti saat jeda &amp; game over</span>
-            </div>
+            </div> -->
             <div class="inst-row">
               <span class="inst-icon">⌨️</span
               ><span>kontrol keyboard: W A S D</span>
             </div>
             <div class="inst-row">
               <span class="inst-icon">🐟</span
-              ><span>Makan ikan yang <b>lebih kecil</b> untuk tumbuh</span>
+              ><span>makan ikan yang <b>lebih kecil</b> </span>
             </div>
             <div class="inst-row">
               <span class="inst-icon">❤️</span
-              ><span>Ikan hati menyembuhkan, ikan emas memberi bonus poin</span>
+              ><span>Ikan hati menyembuhkan</span>
             </div>
             <div class="inst-row">
               <span class="inst-icon">💣</span
-              ><span>Hindari barel, ranjau, dan harpun</span>
+              ><span>Hindari barel dan harpun = kurangi HP</span>
+            </div>
+            <div class="inst-row">
+              <span class="inst-icon">💣</span
+              ><span><b>Ranjau merah = INSTANT KILL</b> ⚠️</span>
             </div>
           </div>
           <button id="start-btn" class="cta-btn">MULAI</button>
@@ -110,6 +113,9 @@
           <div class="go-stats">
             <div class="stat-row">
               <span>Skor Akhir</span><span id="go-score">0</span>
+            </div>
+            <div class="stat-row">
+              <span>Skor Tertinggi</span><span id="go-high-score">0</span>
             </div>
             <div class="stat-row">
               <span>Ikan Dimakan</span><span id="go-eaten">0</span>

@@ -105,8 +105,9 @@ class SpriteAnimator {
     // Update posisi
     this.x += this.speed * this.direction;
 
-    // Bounce ketika mencapai tepi
-    if (this.x + this.width > this.canvas.width || this.x < 0) {
+    // Bounce ketika mencapai tepi dengan margin untuk ruang kosong
+    const margin = 60; // Ruang kosong di tepi agar target jelas
+    if (this.x + this.width > this.canvas.width - margin || this.x < margin) {
       this.direction *= -1;
       this.emit("bounce");
     }

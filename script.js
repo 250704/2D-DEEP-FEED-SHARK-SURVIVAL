@@ -12,7 +12,6 @@ const levelEl = document.getElementById("level");
 const comboEl = document.getElementById("combo");
 const eatenEl = document.getElementById("eaten");
 const healthBar = document.getElementById("health-bar");
-const sizeBar = document.getElementById("size-bar");
 const startScr = document.getElementById("start-screen");
 const goScr = document.getElementById("gameover-screen");
 const pauseScr = document.getElementById("pause-screen");
@@ -20,6 +19,7 @@ const startBtn = document.getElementById("start-btn");
 const restartBtn = document.getElementById("restart-btn");
 const resumeBtn = document.getElementById("resume-btn");
 const goScore = document.getElementById("go-score");
+const goHighScore = document.getElementById("go-high-score");
 const goEaten = document.getElementById("go-eaten");
 const goDepth = document.getElementById("go-depth");
 const goCombo = document.getElementById("go-combo");
@@ -39,6 +39,17 @@ const SPAWN_MARGIN = 80;
 const COMBO_WINDOW = 3.5; // seconds before combo resets
 const MAX_LEVEL = 8;
 const HAZARD_BASE_INTERVAL = 3.4;
+const EDIBLE_FISH_SPEED_BOOST = 1.28;
+const FISH_SMOOTH_PROFILE = "arcade"; // "arcade" | "cinematic"
+const FISH_SIZE_PROFILE = {
+  nemo: { spawnRadius: [0.9, 1.04], draw: [0.96, 1.04] },
+  realistic: { spawnRadius: [0.94, 1.08], draw: [1.0, 1.08] },
+  yellow: { spawnRadius: [0.92, 1.06], draw: [0.98, 1.06] },
+  barakuda: { spawnRadius: [0.98, 1.14], draw: [1.02, 1.12] },
+  whaleSmall: { spawnRadius: [0.78, 0.98], draw: [1.0, 1.08] },
+  whaleMedium: { spawnRadius: [1.08, 1.3], draw: [1.1, 1.2] },
+  whaleLarge: { spawnRadius: [1.78, 2.18], draw: [1.24, 1.36] },
+};
 
 const SHARK_STAGES = [
   {
@@ -116,8 +127,14 @@ const MISSIONS = [
 
 const TUTORIAL_STEPS = [
   { time: 0, text: "Gerakkan hiu ke ikan kecil untuk makan dan tumbuh." },
-  { time: 6, text: "Jaga vitalitas tetap aman. Jangan terlalu lama tanpa makan." },
-  { time: 12, text: "Ikan besar dan hazard bisa melukai. Putar arah sebelum tabrak." },
+  {
+    time: 6,
+    text: "Jaga vitalitas tetap aman. Jangan terlalu lama tanpa makan.",
+  },
+  {
+    time: 12,
+    text: "Ikan besar dan hazard bisa melukai. Putar arah sebelum tabrak.",
+  },
   { time: 20, text: "Kejar kombo cepat untuk skor lebih tinggi." },
 ];
 
@@ -190,6 +207,10 @@ let sharkFrames = [];
 let sharkFrameIndex = 0;
 let sharkFrameTimer = 0;
 let nemoDirSprites = new Array(8).fill(null);
+let realisticDirSprites = new Array(8).fill(null);
+let yellowDirSprites = new Array(8).fill(null);
+let barakudaDirSprites = new Array(8).fill(null);
+let whaleDirSprites = new Array(8).fill(null);
 const SHARK_IDLE_FPS = 4.5;
 const SHARK_SWIM_FPS = 11.5;
 // Directional sprite order:
@@ -247,6 +268,46 @@ const NEMO_DIR_CANDIDATES = [
     "assets/nemo/down-right-removebg-preview.png",
     "assets/nemo/down-right-removebg-preview (1).png",
   ],
+];
+const REALISTIC_DIR_CANDIDATES = [
+  ["assets/fish/realistic/fish-right.png"],
+  ["assets/fish/realistic/fish-down-right.png"],
+  ["assets/fish/realistic/fish-down.png"],
+  ["assets/fish/realistic/fish-down-left.png"],
+  ["assets/fish/realistic/fish-left.png"],
+  ["assets/fish/realistic/fish-up-left.png"],
+  ["assets/fish/realistic/fish-up.png"],
+  ["assets/fish/realistic/fish-up-right.png"],
+];
+const YELLOW_DIR_CANDIDATES = [
+  ["assets/fish/yellow/fish-right.png"],
+  ["assets/fish/yellow/fish-down-right.png"],
+  ["assets/fish/yellow/fish-down.png"],
+  ["assets/fish/yellow/fish-down-left.png"],
+  ["assets/fish/yellow/fish-left.png"],
+  ["assets/fish/yellow/fish-up-left.png"],
+  ["assets/fish/yellow/fish-up.png"],
+  ["assets/fish/yellow/fish-up-right.png"],
+];
+const BARAKUDA_DIR_CANDIDATES = [
+  ["assets/fish/barakuda/fish-right.png"],
+  ["assets/fish/barakuda/fish-down-right.png"],
+  ["assets/fish/barakuda/fish-down.png"],
+  ["assets/fish/barakuda/fish-down-left.png"],
+  ["assets/fish/barakuda/fish-left.png"],
+  ["assets/fish/barakuda/fish-up-left.png"],
+  ["assets/fish/barakuda/fish-up.png"],
+  ["assets/fish/barakuda/fish-up-right.png"],
+];
+const WHALE_DIR_CANDIDATES = [
+  ["assets/fish/whale/fish-right.png"],
+  ["assets/fish/whale/fish-down-right.png"],
+  ["assets/fish/whale/fish-down.png"],
+  ["assets/fish/whale/fish-down-left.png"],
+  ["assets/fish/whale/fish-left.png"],
+  ["assets/fish/whale/fish-up-left.png"],
+  ["assets/fish/whale/fish-up.png"],
+  ["assets/fish/whale/fish-up-right.png"],
 ];
 
 function tryLoadImage(src) {
@@ -358,7 +419,7 @@ let musicNextNoteAt = 0;
 let musicStepIndex = 0;
 let fallbackMusicCooldown = 0;
 let fallbackMusicStep = 0;
-const MUSIC_FILE_PATH = "assets/sounds/Beneath_the_Coral_Shelf.mp3";
+const MUSIC_FILE_PATH = "assets/sounds/beneath-the-coral-shelf_RwmZAy9S.mp3";
 let bgmAudio = null;
 
 const MUSIC_BPM = 102;
@@ -366,7 +427,9 @@ const MUSIC_STEP_BEATS = 0.5;
 const MUSIC_LEAD_PATTERN = [
   220, 246.94, 261.63, 293.66, 329.63, 293.66, 261.63, 246.94,
 ];
-const FALLBACK_MUSIC_PATTERN = [174.61, 196, 220, 246.94, 196, 220, 246.94, 293.66];
+const FALLBACK_MUSIC_PATTERN = [
+  174.61, 196, 220, 246.94, 196, 220, 246.94, 293.66,
+];
 
 function sfxGetContext() {
   const AC = window.AudioContext || window.webkitAudioContext;
@@ -461,7 +524,8 @@ function sfxNoiseBurst(dur, peakVol, t0, filterFreq) {
   const len = Math.ceil(ctx.sampleRate * dur);
   const buf = ctx.createBuffer(1, len, ctx.sampleRate);
   const data = buf.getChannelData(0);
-  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  for (let i = 0; i < len; i++)
+    data[i] = (Math.random() * 2 - 1) * (1 - i / len);
   const src = ctx.createBufferSource();
   src.buffer = buf;
   const filt = ctx.createBiquadFilter();
@@ -709,30 +773,37 @@ function updateAmbientMusic() {
   updateFallbackMusic(dtCache || 0.016, intensity);
 }
 
-async function loadNemoFishSprites() {
+async function loadDirectionalSprites(candidates, targetSprites, label) {
   let loaded = 0;
-  for (let i = 0; i < NEMO_DIR_CANDIDATES.length; i++) {
-    for (const src of NEMO_DIR_CANDIDATES[i]) {
+  for (let i = 0; i < candidates.length; i++) {
+    for (const src of candidates[i]) {
       const img = await tryLoadImage(src);
       if (img) {
-        nemoDirSprites[i] = removeSpriteBackground(img);
+        targetSprites[i] = removeSpriteBackground(img);
         loaded++;
         break;
       }
     }
   }
   if (loaded > 0) {
-    // fill missing directions with nearest available sprite
-    for (let i = 0; i < nemoDirSprites.length; i++) {
-      if (!nemoDirSprites[i])
-        nemoDirSprites[i] = nemoDirSprites[0] || nemoDirSprites[1] || null;
+    for (let i = 0; i < targetSprites.length; i++) {
+      if (!targetSprites[i])
+        targetSprites[i] = targetSprites[0] || targetSprites[1] || null;
     }
-    console.log(`Loaded Nemo directional sprites: ${loaded}/8`);
+    console.log(`Loaded ${label} directional sprites: ${loaded}/8`);
   } else {
-    console.warn("No Nemo fish sprite found. Using default fish shape.");
+    console.warn(`No ${label} fish sprite found. Using default fish shape.`);
   }
 }
-loadNemoFishSprites();
+loadDirectionalSprites(NEMO_DIR_CANDIDATES, nemoDirSprites, "Nemo");
+loadDirectionalSprites(
+  REALISTIC_DIR_CANDIDATES,
+  realisticDirSprites,
+  "Realistic",
+);
+loadDirectionalSprites(YELLOW_DIR_CANDIDATES, yellowDirSprites, "Yellow");
+loadDirectionalSprites(BARAKUDA_DIR_CANDIDATES, barakudaDirSprites, "Barakuda");
+loadDirectionalSprites(WHALE_DIR_CANDIDATES, whaleDirSprites, "Whale");
 
 // ── Player ──
 const player = {
@@ -839,11 +910,26 @@ function getMoveKeyId(e) {
   const key = (e.key || "").toLowerCase();
   if (code === "KeyW" || key === "w" || code === "ArrowUp" || key === "arrowup")
     return "w";
-  if (code === "KeyA" || key === "a" || code === "ArrowLeft" || key === "arrowleft")
+  if (
+    code === "KeyA" ||
+    key === "a" ||
+    code === "ArrowLeft" ||
+    key === "arrowleft"
+  )
     return "a";
-  if (code === "KeyS" || key === "s" || code === "ArrowDown" || key === "arrowdown")
+  if (
+    code === "KeyS" ||
+    key === "s" ||
+    code === "ArrowDown" ||
+    key === "arrowdown"
+  )
     return "s";
-  if (code === "KeyD" || key === "d" || code === "ArrowRight" || key === "arrowright")
+  if (
+    code === "KeyD" ||
+    key === "d" ||
+    code === "ArrowRight" ||
+    key === "arrowright"
+  )
     return "d";
   return null;
 }
@@ -1037,6 +1123,7 @@ function gameOver() {
   setDangerWarning(false);
   checkHighScore(); // Update high score if current score is higher
   goScore.textContent = score;
+  if (goHighScore) goHighScore.textContent = highScore;
   goEaten.textContent = eaten;
   goDepth.textContent = maxDepth;
   goCombo.textContent = "x" + bestCombo;
@@ -1084,7 +1171,8 @@ function setDangerWarning(show) {
 }
 
 function getMissionProgressText(mission) {
-  if (mission.id === "grow") return `${mission.label} (${playerSize.toFixed(2)}/${mission.target})`;
+  if (mission.id === "grow")
+    return `${mission.label} (${playerSize.toFixed(2)}/${mission.target})`;
   return `${mission.label} (${Math.floor(missionProgress)}/${mission.target})`;
 }
 
@@ -1092,14 +1180,21 @@ function updateMissionProgress() {
   const mission = MISSIONS[missionIndex];
   if (!mission) return;
   if (mission.id === "survive") missionProgress += dtCache;
-  if (mission.id === "combo") missionProgress = Math.max(missionProgress, comboCount);
-  if (mission.id === "grow") missionProgress = Math.max(missionProgress, playerSize);
+  if (mission.id === "combo")
+    missionProgress = Math.max(missionProgress, comboCount);
+  if (mission.id === "grow")
+    missionProgress = Math.max(missionProgress, playerSize);
 
   const done = missionProgress >= mission.target;
   if (done) {
     playSfxMission();
     score += mission.reward;
-    addPopText(player.x, player.y - player.radius - 28, `MISI SELESAI +${mission.reward}`, "#7efcff");
+    addPopText(
+      player.x,
+      player.y - player.radius - 28,
+      `MISI SELESAI +${mission.reward}`,
+      "#7efcff",
+    );
     missionIndex = (missionIndex + 1) % MISSIONS.length;
     missionProgress = 0;
   }
@@ -1107,11 +1202,28 @@ function updateMissionProgress() {
 
 let dtCache = 0;
 
+function getFishTurnSmoothConfig() {
+  if (FISH_SMOOTH_PROFILE === "cinematic") {
+    return { turnMul: 0.82, bankMul: 1.15, bankClamp: 0.36, bankCatchup: 6.2 };
+  }
+  return { turnMul: 1.16, bankMul: 0.86, bankClamp: 0.24, bankCatchup: 8.8 };
+}
+
+function randFromRangePair(pair) {
+  return randRange(pair[0], pair[1]);
+}
+
 // ═══════════════════════════════════════════════════════
 //  SPAWN
 // ═══════════════════════════════════════════════════════
 function weightedTier() {
   const types = FISH_TYPES.filter((t) => {
+    // Nonaktifkan ikan bentuk lama yang diminta dihapus:
+    // - medium (hijau)
+    // - large (oranye bergigi)
+    if (t.tier === "medium" || t.tier === "large") return false;
+    // Nonaktifkan boss default (ungu). Boss hanya muncul sebagai paus saat player sudah besar.
+    if (t.tier === "boss" && playerSize < 2.25) return false;
     if (level < 2 && (t.tier === "large" || t.tier === "boss")) return false;
     if (level < 4 && t.tier === "boss") return false;
     return true;
@@ -1142,17 +1254,28 @@ function getScaledFishRadius(type) {
 function spawnFish(canSpawnNearPlayer = false) {
   const type = weightedTier();
   let radius = getScaledFishRadius(type);
+  const whaleUnlocked = playerSize >= 2.25;
+  const isWhaleBoss = type.tier === "boss" && whaleUnlocked;
+  let whaleClass = null;
 
   const view = getViewInfo();
   const spawnAngle = Math.random() * TAU;
-  const spawnDist = canSpawnNearPlayer ?
-    randRange(Math.max(90, player.radius * 3.2), Math.max(180, view.radius * 0.72))
-  : view.radius + randRange(120, 520);
+  const spawnDist =
+    canSpawnNearPlayer ?
+      randRange(
+        Math.max(90, player.radius * 3.2),
+        Math.max(180, view.radius * 0.72),
+      )
+    : view.radius + randRange(120, 520);
   const x = player.x + Math.cos(spawnAngle) * spawnDist;
   const y = player.y + Math.sin(spawnAngle) * spawnDist;
 
   const angle = Math.atan2(player.y - y, player.x - x) + randRange(-0.9, 0.9);
-  const speed = (type.baseSpeed + level * 4) * randRange(0.7, 1.3);
+  const canUseSpriteFish = type.tier === "tiny" || type.tier === "small";
+  const edibleSpeedMul = canUseSpriteFish ? EDIBLE_FISH_SPEED_BOOST : 1;
+  let whaleSpeedMul = 1;
+  const speed =
+    (type.baseSpeed + level * 4) * edibleSpeedMul * randRange(0.78, 1.34);
 
   // Keep ecosystem dynamic: some fish stay edible, some stay threatening.
   const roleRoll = Math.random();
@@ -1160,56 +1283,114 @@ function spawnFish(canSpawnNearPlayer = false) {
     const preyMax = Math.max(type.minR, player.radius * randRange(0.5, 0.88));
     radius = Math.min(radius, preyMax);
   } else if (roleRoll > 0.82) {
-    const predatorMin = Math.max(type.minR, player.radius * randRange(1.08, 1.36));
+    const predatorMin = Math.max(
+      type.minR,
+      player.radius * randRange(1.08, 1.36),
+    );
     radius = Math.max(radius, predatorMin);
   }
   radius = clamp(radius, type.minR * 0.9, type.maxR * 2.4);
+  if (isWhaleBoss) {
+    const roll = Math.random();
+    // Variasi paus: tidak semua raksasa, agar ada yang bisa dimakan.
+    if (roll < 0.34) {
+      whaleClass = "small";
+      radius *= randFromRangePair(FISH_SIZE_PROFILE.whaleSmall.spawnRadius);
+      radius = Math.min(radius, player.radius * randRange(0.72, 0.92));
+      whaleSpeedMul = 1.04;
+    } else if (roll < 0.74) {
+      whaleClass = "medium";
+      radius *= randFromRangePair(FISH_SIZE_PROFILE.whaleMedium.spawnRadius);
+      radius = clamp(radius, player.radius * 0.9, player.radius * 1.16);
+      whaleSpeedMul = 0.98;
+    } else {
+      whaleClass = "large";
+      radius *= randFromRangePair(FISH_SIZE_PROFILE.whaleLarge.spawnRadius);
+      radius = Math.max(radius, player.radius * randRange(1.32, 1.56));
+      whaleSpeedMul = 0.9;
+    }
+  }
 
   let bonusType = null;
   if ((type.tier === "tiny" || type.tier === "small") && Math.random() < 0.08) {
     bonusType = Math.random() < 0.65 ? "heart" : "gold";
   }
-  const isNemo =
-    (type.tier === "tiny" || type.tier === "small") && Math.random() < 0.7;
+  let fishSpriteType = null;
+  if (canUseSpriteFish) {
+    const roll = Math.random();
+    if (roll < 0.25) fishSpriteType = "nemo";
+    else if (roll < 0.5) fishSpriteType = "realistic";
+    else if (roll < 0.75) fishSpriteType = "yellow";
+    else fishSpriteType = "barakuda";
+  } else if (isWhaleBoss) {
+    fishSpriteType = "whale";
+  }
+  if (fishSpriteType === "nemo") {
+    radius *= randFromRangePair(FISH_SIZE_PROFILE.nemo.spawnRadius);
+  } else if (fishSpriteType === "realistic") {
+    radius *= randFromRangePair(FISH_SIZE_PROFILE.realistic.spawnRadius);
+  } else if (fishSpriteType === "yellow") {
+    radius *= randFromRangePair(FISH_SIZE_PROFILE.yellow.spawnRadius);
+  } else if (fishSpriteType === "barakuda") {
+    radius *= randFromRangePair(FISH_SIZE_PROFILE.barakuda.spawnRadius);
+  }
 
   fishes.push({
     x,
     y,
     radius,
-    vx: Math.cos(angle) * speed,
-    vy: Math.sin(angle) * speed,
+    vx: Math.cos(angle) * speed * whaleSpeedMul,
+    vy: Math.sin(angle) * speed * whaleSpeedMul,
     angle,
     type,
     wobble: Math.random() * TAU,
-    wobbleSpeed: randRange(2, 5),
-    turnTimer: randRange(1, 4),
-    burstTimer: randRange(0.8, 2.6),
+    wobbleSpeed: isWhaleBoss ? randRange(1.1, 2.1) : randRange(2, 5),
+    turnTimer: isWhaleBoss ? randRange(1.8, 4.2) : randRange(1, 4),
+    burstTimer: isWhaleBoss ? randRange(1.4, 3.1) : randRange(0.8, 2.6),
     aggression:
-      type.tier === "boss"
-        ? randRange(1.18, 1.45)
-        : type.tier === "large"
-          ? randRange(1.02, 1.28)
-          : type.tier === "medium"
-            ? randRange(0.86, 1.1)
-            : randRange(0.66, 0.95),
+      type.tier === "boss" ? randRange(1.18, 1.45)
+      : type.tier === "large" ? randRange(1.02, 1.28)
+      : type.tier === "medium" ? randRange(0.86, 1.1)
+      : randRange(0.66, 0.95),
     preferredDist:
-      type.tier === "boss"
-        ? randRange(140, 240)
-        : type.tier === "large"
-          ? randRange(170, 290)
-          : type.tier === "medium"
-            ? randRange(160, 320)
-            : randRange(180, 340),
+      type.tier === "boss" ? randRange(140, 240)
+      : type.tier === "large" ? randRange(170, 290)
+      : type.tier === "medium" ? randRange(160, 320)
+      : randRange(180, 340),
     wanderBias: randRange(-1, 1),
     fleeing: false,
     opacity: 0,
     scale: 0.1,
     alive: true,
     bonusType,
-    isNemo,
-    nemoVisualAngle: angle,
+    fishSpriteType,
+    visualAngle: angle,
     nemoDirIndex: getDirectionFrameIndex(angle),
     nemoDirCooldown: 0,
+    swimPhase: Math.random() * TAU,
+    swimFreq: isWhaleBoss ? randRange(3.2, 4.6) : randRange(8.5, 12.5),
+    swimAmp: isWhaleBoss ? randRange(0.025, 0.05) : randRange(0.05, 0.1),
+    turnResponsiveness:
+      isWhaleBoss ? randRange(6.6, 8.2)
+      : fishSpriteType ? randRange(10.5, 14.5)
+      : randRange(8, 11),
+    isWhaleBoss,
+    whaleClass,
+    bankAngle: 0,
+    drawScaleMul:
+      fishSpriteType === "nemo" ? randFromRangePair(FISH_SIZE_PROFILE.nemo.draw)
+      : fishSpriteType === "realistic" ?
+        randFromRangePair(FISH_SIZE_PROFILE.realistic.draw)
+      : fishSpriteType === "yellow" ?
+        randFromRangePair(FISH_SIZE_PROFILE.yellow.draw)
+      : fishSpriteType === "barakuda" ?
+        randFromRangePair(FISH_SIZE_PROFILE.barakuda.draw)
+      : isWhaleBoss && whaleClass === "small" ?
+        randFromRangePair(FISH_SIZE_PROFILE.whaleSmall.draw)
+      : isWhaleBoss && whaleClass === "medium" ?
+        randFromRangePair(FISH_SIZE_PROFILE.whaleMedium.draw)
+      : isWhaleBoss ? randFromRangePair(FISH_SIZE_PROFILE.whaleLarge.draw)
+      : 1,
   });
 }
 
@@ -1445,7 +1626,11 @@ function update(dt) {
     dangerWarningTimer = Math.max(dangerWarningTimer, 0.9);
   }
   const maxHazards = 4 + level;
-  if (startGraceTimer <= 0 && hazardTimer >= hazardInterval && hazards.length < maxHazards) {
+  if (
+    startGraceTimer <= 0 &&
+    hazardTimer >= hazardInterval &&
+    hazards.length < maxHazards
+  ) {
     hazardTimer = 0;
     spawnHazard();
     if (level >= 4 && Math.random() < 0.35) spawnHazard();
@@ -1486,7 +1671,8 @@ function update(dt) {
     else if (keys.s && !keys.w) keyY = 1;
     else keyY = keyPressOrder.w >= keyPressOrder.s ? -1 : 1;
   }
-  const useKeyboard = KEYBOARD_ONLY_MOVEMENT ? true : controlMode === "keyboard";
+  const useKeyboard =
+    KEYBOARD_ONLY_MOVEMENT ? true : controlMode === "keyboard";
   const dx = mouseWorld.x - player.x;
   const dy = mouseWorld.y - player.y;
   const dist = Math.hypot(dx, dy);
@@ -1521,9 +1707,8 @@ function update(dt) {
     player.targetAngle = Math.atan2(dy, dx);
   }
 
-  const steerStrength = useKeyboard
-    ? 16
-    : lerp(8.4, 12.2, clamp(dist / fullSpeedDist, 0, 1));
+  const steerStrength =
+    useKeyboard ? 16 : lerp(8.4, 12.2, clamp(dist / fullSpeedDist, 0, 1));
   const followAlpha = 1 - Math.exp(-steerStrength * dt);
   if (useKeyboard && (keyX !== 0 || keyY !== 0)) {
     // Hard lock keyboard direction for instant response and no "stuck moving right" feel.
@@ -1534,13 +1719,13 @@ function update(dt) {
     player.vy += (desiredVy - player.vy) * followAlpha;
   }
 
-  const damping = useKeyboard
-    ? keyX !== 0 || keyY !== 0
-      ? 0.994
+  const damping =
+    useKeyboard ?
+      keyX !== 0 || keyY !== 0 ?
+        0.994
       : 0.86
-    : dist > softZone
-      ? cruiseDamping
-      : idleDamping;
+    : dist > softZone ? cruiseDamping
+    : idleDamping;
   player.vx *= Math.pow(damping, dt * 60);
   player.vy *= Math.pow(damping, dt * 60);
 
@@ -1560,9 +1745,7 @@ function update(dt) {
   let da = player.targetAngle - player.angle;
   while (da > Math.PI) da -= TAU;
   while (da < -Math.PI) da += TAU;
-  const turnRate = useKeyboard
-    ? 18
-    : lerp(7, 12, clamp(pspd / maxSpeed, 0, 1));
+  const turnRate = useKeyboard ? 18 : lerp(7, 12, clamp(pspd / maxSpeed, 0, 1));
   player.angle += da * Math.min(1, dt * turnRate);
 
   player.x += player.vx * dt;
@@ -1675,12 +1858,25 @@ function update(dt) {
 
     // AI
     f.wobble += f.wobbleSpeed * dt;
+    f.swimPhase += dt * f.swimFreq;
     f.turnTimer -= dt;
     f.burstTimer -= dt;
 
     const distToPlayer = Math.hypot(player.x - f.x, player.y - f.y);
-    const baseSpeed = f.type.baseSpeed + level * 4;
-    const maxFishSpeed = baseSpeed * (1.35 + f.aggression * 0.45);
+    const edibleBoost =
+      f.fishSpriteType && (f.type.tier === "tiny" || f.type.tier === "small") ?
+        EDIBLE_FISH_SPEED_BOOST
+      : 1;
+    const whaleBossMul =
+      f.isWhaleBoss ?
+        f.whaleClass === "small" ? 1.02
+        : f.whaleClass === "medium" ? 0.96
+        : 0.9
+      : 1;
+    const baseSpeed =
+      (f.type.baseSpeed + level * 4) * edibleBoost * whaleBossMul;
+    const maxFishSpeed =
+      baseSpeed * (f.isWhaleBoss ? 1.72 : 1.35 + f.aggression * 0.45);
     let steerX = 0;
     let steerY = 0;
     let steeringActive = false;
@@ -1688,12 +1884,21 @@ function update(dt) {
     // small fish should not flee when shark gets close
     if (f.type.tier === "tiny" || f.type.tier === "small") {
       f.fleeing = false;
+      const laneAngle = f.angle + Math.sin(f.swimPhase * 0.65) * 0.22;
+      const laneStrength = baseSpeed * (0.72 + f.aggression * 0.18);
+      steerX += Math.cos(laneAngle) * laneStrength;
+      steerY += Math.sin(laneAngle) * laneStrength;
+      steeringActive = true;
     }
 
     // smarter pursuit/avoidance:
     // - medium fish may chase when bigger, flee when smaller
     // - large/boss fish actively predict player movement and burst
-    if (f.type.tier === "medium" || f.type.tier === "large" || f.type.tier === "boss") {
+    if (
+      f.type.tier === "medium" ||
+      f.type.tier === "large" ||
+      f.type.tier === "boss"
+    ) {
       const canThreatenPlayer = f.radius > playerR * 0.92;
       const playerCanEat = playerR > f.radius * 1.1;
 
@@ -1705,8 +1910,9 @@ function update(dt) {
         const ty = targetY - f.y;
         const tLen = Math.max(0.001, Math.hypot(tx, ty));
         const pursuitStrength =
-          (f.type.tier === "boss" ? 370 : f.type.tier === "large" ? 315 : 248) *
-          f.aggression;
+          (f.type.tier === "boss" ? 370
+          : f.type.tier === "large" ? 315
+          : 248) * f.aggression;
         steerX += (tx / tLen) * pursuitStrength;
         steerY += (ty / tLen) * pursuitStrength;
         steeringActive = true;
@@ -1715,7 +1921,8 @@ function update(dt) {
         const ay = f.y - player.y;
         const aLen = Math.max(0.001, Math.hypot(ax, ay));
         const avoidStrength =
-          (f.type.tier === "medium" ? 190 : 145) * (1.05 + (playerR - f.radius) / 90);
+          (f.type.tier === "medium" ? 190 : 145) *
+          (1.05 + (playerR - f.radius) / 90);
         steerX += (ax / aLen) * avoidStrength;
         steerY += (ay / aLen) * avoidStrength;
         steeringActive = true;
@@ -1725,12 +1932,15 @@ function update(dt) {
     // occasional burst to make fish feel alive and aggressive
     if (f.burstTimer <= 0) {
       f.burstTimer =
-        (f.type.tier === "boss" ? randRange(0.45, 1.05) : randRange(0.8, 2.0)) /
-        Math.max(0.72, f.aggression);
+        (f.isWhaleBoss ? randRange(1.2, 2.4)
+        : f.type.tier === "boss" ? randRange(0.45, 1.05)
+        : randRange(0.8, 2.0)) / Math.max(0.72, f.aggression);
       const burstAngle = Math.atan2(f.vy, f.vx) + randRange(-0.55, 0.55);
       const burstStrength =
-        (f.type.tier === "boss" ? 250 : f.type.tier === "large" ? 210 : 140) *
-        f.aggression;
+        (f.isWhaleBoss ? 180
+        : f.type.tier === "boss" ? 250
+        : f.type.tier === "large" ? 210
+        : 140) * f.aggression;
       f.vx += Math.cos(burstAngle) * burstStrength * dt;
       f.vy += Math.sin(burstAngle) * burstStrength * dt;
     }
@@ -1754,13 +1964,18 @@ function update(dt) {
     }
 
     // drag
-    const drag = steeringActive ? 0.935 : 0.912;
+    const drag =
+      f.isWhaleBoss ?
+        steeringActive ? 0.955
+        : 0.942
+      : steeringActive ? 0.935
+      : 0.912;
     f.vx *= Math.pow(drag, dt * 60);
     f.vy *= Math.pow(drag, dt * 60);
 
     // min speed
     const fspd = Math.hypot(f.vx, f.vy);
-    const minSpd = (f.type.baseSpeed + level * 2) * (steeringActive ? 0.52 : 0.34);
+    const minSpd = baseSpeed * (steeringActive ? 0.58 : 0.42);
     if (fspd < minSpd) {
       f.vx *= minSpd / Math.max(fspd, 0.01);
       f.vy *= minSpd / Math.max(fspd, 0.01);
@@ -1772,21 +1987,35 @@ function update(dt) {
     }
 
     f.angle = Math.atan2(f.vy, f.vx);
-    if (f.isNemo) {
-      let nda = f.angle - f.nemoVisualAngle;
-      while (nda > Math.PI) nda -= TAU;
-      while (nda < -Math.PI) nda += TAU;
-      f.nemoVisualAngle += nda * Math.min(1, dt * 9);
-      f.nemoDirCooldown = Math.max(0, f.nemoDirCooldown - dt);
-      const desiredNemoDir = getDirectionFrameIndex(f.nemoVisualAngle);
-      if (desiredNemoDir !== f.nemoDirIndex && f.nemoDirCooldown <= 0) {
-        f.nemoDirIndex = desiredNemoDir;
-        f.nemoDirCooldown = lerp(
-          0.09,
-          0.04,
-          clamp(Math.hypot(f.vx, f.vy) / 220, 0, 1),
-        );
-      }
+    let da = f.angle - (f.visualAngle ?? f.angle);
+    while (da > Math.PI) da -= TAU;
+    while (da < -Math.PI) da += TAU;
+    const smoothCfg = getFishTurnSmoothConfig();
+    const turnSpeed =
+      (f.turnResponsiveness || 9) *
+      (f.isWhaleBoss ? 0.92 : 1) *
+      smoothCfg.turnMul;
+    f.visualAngle =
+      (f.visualAngle ?? f.angle) + da * Math.min(1, dt * turnSpeed);
+    const bankTarget = clamp(
+      da * 0.7 * smoothCfg.bankMul,
+      -smoothCfg.bankClamp,
+      smoothCfg.bankClamp,
+    );
+    f.bankAngle =
+      (f.bankAngle || 0) +
+      (bankTarget - (f.bankAngle || 0)) *
+        Math.min(1, dt * smoothCfg.bankCatchup);
+
+    f.nemoDirCooldown = Math.max(0, f.nemoDirCooldown - dt);
+    const desiredNemoDir = getDirectionFrameIndex(f.visualAngle);
+    if (desiredNemoDir !== f.nemoDirIndex && f.nemoDirCooldown <= 0) {
+      f.nemoDirIndex = desiredNemoDir;
+      f.nemoDirCooldown = lerp(
+        0.06,
+        0.02,
+        clamp(Math.hypot(f.vx, f.vy) / 280, 0, 1),
+      );
     }
     f.x += f.vx * dt;
     f.y += f.vy * dt;
@@ -1854,17 +2083,27 @@ function update(dt) {
     const hazColThreshold = playerR * 0.8 + h.radius;
 
     if (hazColDist < hazColThreshold && player.invincible <= 0) {
-      // HIT hazard - damage reduced by unlocked shark stage
-      const stage = getCurrentSharkStage();
-      const finalDamage = Math.round(h.damage * stage.damageMul);
-      health = Math.max(0, health - finalDamage);
-      player.invincible = 1.5; // invincibility frames
-      spawnHitParticles(h.x, h.y);
-      spawnBloodParticles(h.x, h.y, 6);
-      addPopText(h.x, h.y - 20, `-${finalDamage}`, "#ff2d2d");
-      playSfxHazard();
-      shakeMag = 8;
-      hazards.splice(i, 1);
+      // MINES = INSTANT DEATH
+      if (h.type === "mine") {
+        health = 0;
+        spawnBloodParticles(h.x, h.y, 12);
+        addPopText(h.x, h.y - 20, "TERKENA RANJAU!", "#ff2d2d");
+        playSfxHazard();
+        triggerShake(15);
+        hazards.splice(i, 1);
+      } else {
+        // OTHER HAZARDS - damage reduced by unlocked shark stage
+        const stage = getCurrentSharkStage();
+        const finalDamage = Math.round(h.damage * stage.damageMul);
+        health = Math.max(0, health - finalDamage);
+        player.invincible = 1.5; // invincibility frames
+        spawnHitParticles(h.x, h.y);
+        spawnBloodParticles(h.x, h.y, 6);
+        addPopText(h.x, h.y - 20, `-${finalDamage}`, "#ff2d2d");
+        playSfxHazard();
+        shakeMag = 8;
+        hazards.splice(i, 1);
+      }
     }
   }
 
@@ -2013,7 +2252,8 @@ function updateHUD() {
   comboEl.textContent = "x" + Math.max(1, comboCount);
   eatenEl.textContent = eaten;
   const mission = MISSIONS[missionIndex];
-  if (missionTextEl && mission) missionTextEl.textContent = getMissionProgressText(mission);
+  if (missionTextEl && mission)
+    missionTextEl.textContent = getMissionProgressText(mission);
 
   const hp = health / MAX_HEALTH;
   healthBar.style.width = hp * 100 + "%";
@@ -2027,9 +2267,6 @@ function updateHUD() {
     healthBar.style.background = "linear-gradient(90deg, #ff2d2d, #ff6b6b)";
     healthBar.style.boxShadow = "0 0 12px #ff2d2d";
   }
-
-  const sz = Math.min((sizeTarget - 1) / (MAX_SIZE_GROW - 1), 1);
-  sizeBar.style.width = 5 + sz * 95 + "%";
 }
 
 // ═══════════════════════════════════════════════════════
@@ -2246,12 +2483,22 @@ function drawFishes(t) {
     ctx.scale(f.scale, f.scale);
     const wobbleY = Math.sin(f.wobble * 2) * 2;
     ctx.translate(0, wobbleY);
-    if (f.isNemo && nemoDirSprites[0]) {
-      drawNemoFish(ctx, f.radius, f.nemoDirIndex);
+    const visualAngle = f.visualAngle ?? f.angle;
+    const bank = f.bankAngle || 0;
+    const spriteSet =
+      f.fishSpriteType === "nemo" ? nemoDirSprites
+      : f.fishSpriteType === "realistic" ? realisticDirSprites
+      : f.fishSpriteType === "yellow" ? yellowDirSprites
+      : f.fishSpriteType === "barakuda" ? barakudaDirSprites
+      : f.fishSpriteType === "whale" ? whaleDirSprites
+      : null;
+    if (spriteSet && spriteSet[0]) {
+      ctx.rotate(bank);
+      drawDirectionalFish(ctx, f, t, spriteSet);
     } else {
       // face direction of travel
-      ctx.rotate(f.angle);
-      if (Math.cos(f.angle) < 0) ctx.scale(1, -1);
+      ctx.rotate(visualAngle + bank * 0.55);
+      if (Math.cos(visualAngle) < 0) ctx.scale(1, -1);
       drawFishShape(ctx, f.type, f.radius, t);
     }
     if (f.bonusType) drawFishBonusMark(ctx, f.bonusType, f.radius);
@@ -2259,14 +2506,23 @@ function drawFishes(t) {
   }
 }
 
-function drawNemoFish(c, r, dirIndex = 0) {
-  const sprite = nemoDirSprites[dirIndex] || nemoDirSprites[0];
+function drawDirectionalFish(c, fish, t, spriteSet = nemoDirSprites) {
+  const r = fish.radius;
+  const dirIndex = fish.nemoDirIndex || 0;
+  const sprite = spriteSet[dirIndex] || spriteSet[0];
   if (!sprite) return;
   const fw = sprite.naturalWidth || sprite.width;
   const fh = sprite.naturalHeight || sprite.height;
   const ratio = fw / Math.max(1, fh);
-  const drawH = r * 2.25;
+  const pulse = Math.sin(fish.swimPhase + t * 0.2);
+  const speedNorm = clamp(Math.hypot(fish.vx, fish.vy) / 260, 0, 1);
+  const stretch = 1 + pulse * fish.swimAmp;
+  const squeeze = 1 - pulse * fish.swimAmp * 0.62;
+  const tilt = Math.sin(fish.swimPhase * 0.8) * (0.04 + speedNorm * 0.06);
+  const drawH = r * 2.28 * (fish.drawScaleMul || 1);
   const drawW = drawH * ratio;
+  c.rotate(tilt);
+  c.scale(stretch, squeeze);
   c.drawImage(sprite, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
 }
 
